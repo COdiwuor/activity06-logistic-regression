@@ -15,6 +15,11 @@ Again, we will use two packages from Posit: `{tidyverse}` and `{tidymodels}`.
   - Load `{tidyverse}` and `{tidymodels}` and any other packages you want to use.
 - Give your R code chunk a meaningful name, then run your code chunk or knit your document.
 
+```{r, message =FALSE}
+library(tidyverse)
+library(tidymodels)
+library(ggplot2)
+```
 
 
 ## Load the data
@@ -42,6 +47,13 @@ Read in the `resume` **CSV** file that is in `day01-logistic/data`.
   - *Read* in the *CSV* file from the `data` folder and store it in an R dataframe called `resume`.
 - Give your R code chunk a meaningful name, then run your code chunk or knit your document.
 
+Link to data: [Resume](https://www.openintro.org/data/csv/resume.csv)
+
+```{r}
+#resume = read.csv("https://www.openintro.org/data/csv/resume.csv")
+resume = read.csv("data/resume.csv")
+resume
+```
 
 
 Recall that you can use `dplyr::glimpse` to see some meta information about the R data frame.
@@ -49,46 +61,54 @@ After doing this and your review of the data's description page, answer the foll
 
 1. Is this an observational study or an experiment?
   Explain.
+  __Experimental study because, the researchers focus on establishing the cause and effect relationship between dependent and independent variables.__
 
 
 2. The variable of interest is `received_callback`.
   What type of variable is this?
   What do the values represent?
+__Categorical variable, the values represent whether candidates were called after their resumes were received or not.__
 
 
 3. For `received_callback`, create an appropriate data visualization using `{ggplot2}`.
   Be sure to provide more descriptive labels (both axes labels and value labels - there are many ways to do this) as well as an appropriate title.
 
+```{r}
+ggplot(resume, aes(x = received_callback)) +
+  geom_bar() +
+  labs(x = "Received Callback", y = "Count of callbacks") +
+  scale_x_discrete(labels = c("No", "Yes"), breaks = c(0, 1))
+```
 
 4. Below, I provide you with a numerical summary table that should reiterate (i.e., provides numerical values) your plot in (3).
   First, look at each line of code and describe what I am doing.
   Then, replace "verbatim" with "r" before the code chunk title to produce this table.
   
-```{verbatim callback_frequency_table}
-resume %>% 
+```{r callback_frequency_table}
+resume |> 
   mutate(received_callback = case_when(
     received_callback == 0 ~ "No",
     received_callback == 1 ~ "Yes"
-  )) %>% 
-  count(received_callback) %>% 
-  mutate(percent = round(n / sum(n) * 100, 2)) %>% 
+  )) |>
+  count(received_callback) |> 
+  mutate(percent = round(n / sum(n) * 100, 2)) |>
   knitr::kable()
 ```
 
 
 
 5. Using the output from (3) and (4), what do you notice?
-
+__The number call backs not received is significantly higher than received call backs__
 
 ## Probability and odds
 
 Using your output from (3) and (4), answer the following questions:
 
 6. What is the probability that a randomly selected résumé/person will be called back?
-
+__Probability is 8.05%
 
 7. What are the [**odds**](https://en.wikipedia.org/wiki/Odds) that a randomly selected résumé/person will be called back?
-
+__0.08%
 
 ## Logistic regression
 
@@ -116,7 +136,7 @@ Below is a two-way table (also known as a contingency table or crosstable), wher
 Note that the values in each column add to 100%.
 Replace "verbatim" with "r" before the code chunk title to produce this table.
 
-```{verbatim crosstable}
+```{r crosstable}
 resume %>% 
   mutate(received_callback = case_when(
     received_callback == 0 ~ "No",
@@ -141,10 +161,11 @@ resume %>%
 Using the above table, answer the following question:
 
 6. What is the probability that a randomly selected résumé/person perceived as Black will be called back?
-
+__~6%__
 
 7. What are the **odds** that a randomly selected résumé/person perceived as Black will be called back?
 
+__~6%__
 
 This process of calculating conditional (e.g., if a résumé/person perceived as Black is called back) odds will be helpful as we fit our logistic model.
 We will now begin to use the `{tidymodel}` method for fitting models.
@@ -152,7 +173,7 @@ A similar approach could be used for linear regression models and you are encour
 
 - Replace "verbatim" with "r" before the code chunk title to produce the logistic model output.
   
-```{verbatim logistic-model}
+```{r logistic-model}
 # The {tidymodels} method for logistic regression requires that the response be a factor variable
 resume <- resume %>% 
   mutate(received_callback = as.factor(received_callback))
@@ -173,6 +194,19 @@ After doing this, respond to the following questions:
 
 8. Write the estimated regression equation.
   Round to 3 digits.
+```{r model}
+# The {tidymodels} method for logistic regression requires that the response be a factor variable
+resume <- resume |> 
+  mutate(received_callback = as.factor(received_callback))
+
+resume_mod <- logistic_reg() |>
+  set_engine("glm") |>
+  fit(received_callback ~ race, data = resume, family = "binomial")
+
+tidy(resume_mod) |>
+  knitr::kable(digits = 3)
+
+```
 
 
 9. Using your equation in (8), write the *simplified* estimated regression equation corresponding to résumés/persons perceived as Black.
